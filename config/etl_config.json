@@ -1,0 +1,50 @@
+{
+  "video_games_sales": {
+    "producer": "gregorut",
+    "dataset_name": "videogamesales",
+    "file_name" : "vgsales.csv",
+    "data_folder": "bi/jobs/ness",
+    "table_id": "bi-course-461012.ness.vg_sales",
+    "isEnable" : true
+  },
+  "Trending_YouTube_Videos_Statistics": {
+    "producer": "datasnaek",
+    "dataset_name": "youtube-new",
+    "file_name" : "USvideos.csv",
+    "data_folder": "bi/jobs/ness",
+    "table_id": "bi-course-461012.ness.trending_yt",
+    "isEnable" : false
+  },
+  "favorite_music_dataset": {
+    "producer": "nguyenthianhngoc",
+    "dataset_name": "favorite-music-dataset",
+    "file_name" : "favorite_music_dataset.csv",
+    "data_folder": "bi/jobs/ness",
+    "table_id": "bi-course-461012.ness.favorite-music-dataset",
+    "isEnable" : true
+  },
+  "fmcg_daily_sales": {
+    "producer": "beatafaron",
+    "dataset_name": "fmcg-daily-sales-data-to-2022-2024",
+    "file_name" : "FMCG_2022_2024.csv",
+    "data_folder": "bi/jobs/ness",
+    "table_id": "bi-course-461012.ness.fmcg_daily_sales",
+    "isEnable" : true
+  },
+  "us_states_csv": {
+    "url": "https://storage.googleapis.com/cloud-samples-data/bigquery/us-states/us-states.csv",
+    "data_file": "temp/data/bidev/jobs/my_etl_03/us-states.csv",
+    "data_folder": "temp/data/bidev/jobs/my_etl_03/",
+    "table_id": "ppltx-bi-developer.my_etl.us_states_csv",
+    "source_format" : "CSV",
+    "isEnable" : false
+  },
+  "us_states_json": {
+    "url": "https://storage.googleapis.com/cloud-samples-data/bigquery/us-states/us-states.json",
+    "data_file": "temp/data/bidev/jobs/my_etl_03/us-states.json",
+    "data_folder": "temp/data/bidev/jobs/my_etl_03/",
+    "table_id": "ppltx-bi-developer.my_etl.us_states_json",
+    "source_format" : "NEWLINE_DELIMITED_JSON",
+    "isEnable" : false
+  }
+}
