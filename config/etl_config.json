@@ -21,7 +21,7 @@
     "file_name" : "favorite_music_dataset.csv",
     "data_folder": "bi/jobs/ness",
     "table_id": "bi-course-461012.ness.favorite-music-dataset",
-    "isEnable" : true
+    "isEnable" : false
   },
   "fmcg_daily_sales": {
     "producer": "beatafaron",

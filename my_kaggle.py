@@ -6,7 +6,7 @@ repo_tail = jobs/ness/
 home = /Users/doron/workspace
 
 
-python3 bi/jobs/kaggle/my_kaggle.py bi-course-461012 --etl-name etl --etl-action daily
+python3 bi/jobs/ness/my_kaggle.py bi-course-461012 --etl-name etl --etl-action daily
 
 
 /Users/doron/.config/kaggle/kaggle.json
@@ -127,7 +127,7 @@ def set_log(log_dict, step, log_table=log_table):
 ROW_LIMITS = {
     "init": 100,    #set init if first-time run - notice write disposition is TRUNCATE
     "step": 50,     #set step for testing small batches
-    "daily": 1000    # daily run, notice write disposition is APPEND
+    "daily": 900    # daily run, notice write disposition is APPEND
 }
 
 if not flags.dry_run:
@@ -240,7 +240,8 @@ for etl_name, etl_conf in etl_configuration.items():
         # def get_last_loaded(table_id):   #first run only
         #     try:
         #         # query = f"SELECT MAX(row_number) as last FROM `{project_id}.logs.etl_tracking` WHERE etl_name = '{etl_name}'"
-        #         query = f"SELECT MAX(row_number) as last FROM `{project_id}.logs.daily_logs` WHERE etl_name = '{etl_name}'"
+        #         # query = f"SELECT MAX(row_number) as last FROM `{project_id}.logs.daily_logs` WHERE etl_name = '{etl_name}'"
+        #         query = f"SELECT count(*) as last FROM `{etl_conf['table_id']}` WHERE etl_name = '{etl_name}'"
         #         result = list(client.query(query).result())
         #         return result[0].last or 0
         #     except Exception:
