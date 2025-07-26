@@ -310,3 +310,6 @@ for etl_name, etl_conf in etl_configuration.items():
 
 print("\n\n\tDone.")
 
+"""
+SELECT rank, count(*) rank_count FROM `bi-course-461012.ness.vg_sales` group by 1 order by rank_count desc, rank desc limit 10
+"""
