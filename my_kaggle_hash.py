@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-""""
+"""
 repo_name = bi
 repo_tail = jobs/ness/
 home = /Users/doron/workspace
 
 
-python3 bi/jobs/kaggle/my_kaggle.py bi-course-461012 --etl-name etl --etl-action daily
+python3 bi/jobs/ness/my_kaggle_hash.py bi-course-461012 --etl-name etl --etl-action daily --dry-run
 
 
 /Users/doron/.config/kaggle/kaggle.json
@@ -21,7 +21,7 @@ pip3 install pandas-gbq --break-system-packages
 chmod 600 /home/doron_h8j/.config/kaggle/kaggle.json
 """
 
-print("start")
+print('start')
 
 from pathlib import Path
 import os
@@ -36,6 +36,7 @@ import uuid
 import platform
 import pandas as pd
 from kaggle.api.kaggle_api_extended import KaggleApi
+import hashlib
 
 
 # adapt the env to mac or windows
@@ -53,6 +54,15 @@ sys.path.insert(0, str(home / f"{repo_name}/utilities/"))
 # print(f"repo name is: {repo_name}  \t repo tail is {repo_tail}")
 
 from my_etl_files import readJsonFile, ensureDirectory, writeFile, readFile
+
+def generate_hash(row):
+    """
+    Generate an MD5 hash for a row to serve as a unique identifier.
+    Converts the entire row into a string, joins values with '|',
+    and returns a hash string.
+    """
+    row_str = "|".join(str(val) for val in row)
+    return hashlib.md5(row_str.encode('utf-8')).hexdigest()
 
 def process_command_line(argv):
     if argv is None:
@@ -127,7 +137,7 @@ def set_log(log_dict, step, log_table=log_table):
 ROW_LIMITS = {
     "init": 100,    #set init if first-time run - notice write disposition is TRUNCATE
     "step": 50,     #set step for testing small batches
-    "daily": 1000    # daily run, notice write disposition is APPEND
+    "daily": 500    # daily run, notice write disposition is APPEND
 }
 
 if not flags.dry_run:
@@ -141,8 +151,6 @@ if not flags.dry_run:
 
 
 for etl_name, etl_conf in etl_configuration.items():
-        # if etl_name != "fmcg_daily_sales":
-        #     continue  # skip all other datasets
         if not etl_conf['isEnable']:
             continue
         print(f"{etl_name}\n{len(etl_name)*'='}\n")
@@ -237,31 +245,35 @@ for etl_name, etl_conf in etl_configuration.items():
 
 
         # Get previously loaded row count (basic example)
-        # def get_last_loaded(table_id):   #first run only
-        #     try:
-        #         # query = f"SELECT MAX(row_number) as last FROM `{project_id}.logs.etl_tracking` WHERE etl_name = '{etl_name}'"
-        #         query = f"SELECT MAX(row_number) as last FROM `{project_id}.logs.daily_logs` WHERE etl_name = '{etl_name}'"
-        #         result = list(client.query(query).result())
-        #         return result[0].last or 0
-        #     except Exception:
-        #         return 0
         def get_last_loaded(table_id):
             try:
-                table = client.get_table(table_id)
-                return table.num_rows
-            except Exception as e:
-                print(f"Error getting last loaded rows: {e}")
+                query = f"SELECT MAX(row_number) as last FROM `{project_id}.logs.etl_tracking` WHERE etl_name = '{etl_name}'"
+                # query = f"SELECT MAX(row_number) as last FROM {etl_conf['table_id']} WHERE etl_name = '{etl_name}'"
+                result = list(client.query(query).result())
+                return result[0].last or 0
+            except Exception:
                 return 0
 
 
         start = get_last_loaded(table_id)
         end = start + limit
         df_batch = df.iloc[start:end]
+        df_batch["row_hash"] = df_batch.apply(generate_hash, axis=1)
+        # Define staging table
+        staging_table_id = table_id + "_staging"
 
-        #  Skip this dataset if there are no rows left to process
-        if df_batch.empty:
-            print(f"Skipping {etl_name} — no new rows to load.")
-            continue
+        try:
+            client.get_table(staging_table_id)
+            print(f" Staging table {staging_table_id} exists.")
+        except:
+            print(f" Creating staging table {staging_table_id}...")
+            main_table = client.get_table(table_id)
+            schema = main_table.schema
+            if not any(f.name == "row_hash" for f in schema):
+                schema.append(bigquery.SchemaField("row_hash", "STRING"))
+            staging_table = bigquery.Table(staging_table_id, schema=schema)
+            client.create_table(staging_table)
+            print(f" Created staging table {staging_table_id}")
 
         # Clean problematic quotes in description column
         if "description" in df_batch.columns:
@@ -280,8 +292,7 @@ for etl_name, etl_conf in etl_configuration.items():
 
         if not flags.dry_run:
             job_config = bigquery.LoadJobConfig(
-                # autodetect=True, #first load only
-                autodetect=False, #
+                autodetect=True,
                 # write_disposition="WRITE_TRUNCATE",
                 write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
                 skip_leading_rows=1,
@@ -290,11 +301,27 @@ for etl_name, etl_conf in etl_configuration.items():
             )
 
             with open(data_file, "rb") as source_file:
-                job = client.load_table_from_file(source_file, table_id, job_config=job_config)
+                # job = client.load_table_from_file(source_file, table_id, job_config=job_config)
+                job = client.load_table_from_file(source_file, staging_table_id, job_config=job_config)
 
             job.result()  # Waits for the job to complete.
 
+            print(f" Loaded {len(df_batch)} rows into staging table {staging_table_id}")
 
+            # MERGE staging → main
+            merge_query = f"""
+            MERGE `{table_id}` AS T
+            USING `{staging_table_id}` AS S
+            ON T.row_hash = S.row_hash
+            WHEN NOT MATCHED THEN
+              INSERT ROW
+            """
+            client.query(merge_query).result()
+            print(f" Merged new rows into {table_id}")
+
+            # ✅ Truncate staging for next run
+            client.query(f"TRUNCATE TABLE `{staging_table_id}`").result()
+            print(f"Truncated staging table {staging_table_id}")
 
             table = client.get_table(table_id)  # Make an API request.
             msg = f"Loaded {table.num_rows} rows and {len(table.schema)} columns to {table_id}"
