@@ -14,7 +14,7 @@ python3 bi/jobs/ness/my_kaggle.py bi-course-461012 --etl-name etl --etl-action d
 ls /home/doron_h8j
 nano /home/doron_h8j/.config/kaggle/kaggle.json
 
-{"username":"doronhadad","key":"6065b66acd456ea4b051263004ed6552"}
+
 
 pip3 install pandas-gbq --break-system-packages
 
